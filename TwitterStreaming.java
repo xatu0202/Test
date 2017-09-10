@@ -8,8 +8,16 @@ import java.util.Map.Entry;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
-public class Twitter{
-	public static String sendRequest(OAuth t){
+import mjson.Json;
+import org.json.JSONObject;
+public class TwitterStreaming extends Twitter implements Runnable{
+	protected static boolean stopper;
+	protected OAuth t;
+	TwitterStreaming(OAuth T){
+		this.t=T;
+	}
+	public void run(){
+		stopper = false;
 		String paramStr = "";
 		String request = "";
 		for (Entry<String, String> param : t.params.entrySet()) {
@@ -22,8 +30,8 @@ public class Twitter{
 		paramStr = paramStr.substring(2);
 		String authorizationHeader = "OAuth " + paramStr;
 		request=request.substring(0, request.length()-1);
-		StringBuilder responses = new StringBuilder();;
 		String response = "";
+		Json jsonObject;
 		try{
 			URL url = new URL(t.urlStr + "?" + request);
 			HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -33,12 +41,28 @@ public class Twitter{
 			BufferedReader reader = new BufferedReader(new InputStreamReader(
 				connection.getInputStream()
 			));
+			System.out.println("start streaming");
 			while ((response = reader.readLine()) != null) {
-				responses.append(response);
+				//System.out.println(response);
+				if(response.indexOf("text")!=-1){
+				try{
+				jsonObject = Json.read(response);
+				System.out.println(jsonObject.at("created_at"));
+				System.out.println(jsonObject.at("user").at("name")+"\t@"+jsonObject.at("user").at("screen_name"));
+				System.out.println(jsonObject.at("text"));
+				System.out.println("################################################################################");
+				if(stopper){
+					System.out.println("StopFlag:true");
+					break;
+				}
+				}catch(Exception e){
+					e.printStackTrace();
+				}
+			}
 			}
 		}catch(Exception e){
 			
 		}
-		return responses.toString();
+		System.out.println("finish streaming");
 	}
 }
